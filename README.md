@@ -1,0 +1,1 @@
+these scripts were created as an experiment "by IP address to service", I needed to execute `ip a add`, but doing this through `/etc/network/interfaces` is not convenient, especially in terms of automatic adding/removing addresses
