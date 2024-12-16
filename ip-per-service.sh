@@ -6,7 +6,7 @@ if [[ $# -ne 2 ]]; then
 fi
 
 IFACE="$1"
-IPS_FILE=$(cat "$2")
+IPS=$(cat "$2")
 
 for IP in $IPS; do
     if ! ip -6 addr show dev "$IFACE" | grep -q "${IP%%/*}"; then

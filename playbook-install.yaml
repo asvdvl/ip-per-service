@@ -5,9 +5,27 @@
     script_path: '/usr/sbin/ip-per-service.sh'
     interface: 'eth0'
     auto_add_service_with_interface: true
+    dependent_services: ''
 
   become: true
   tasks:
+    - name: Check for existence of services
+      ansible.builtin.stat:
+        path: "/etc/systemd/system/{{ item }}"
+      loop: "{{ dependent_services.split(' ') }}"
+      register: service_check
+      when: auto_add_service_with_interface
+      tags:
+        - add_dependency
+
+    - name: Check results and abort if services are missing
+      ansible.builtin.fail:
+        msg: "Service {{ item.item }} dont exist /etc/systemd/system/"
+      when: not item.stat.exists and auto_add_service_with_interface
+      loop: "{{ service_check.results }}"
+      tags:
+        - add_dependency
+
     - name: Copy script
       ansible.builtin.copy:
         src: ./ip-per-service.sh
@@ -23,8 +41,6 @@
         owner: root
         group: root
         mode: u=rw,g=r,o=r
-      tags:
-        - a
 
     - name: Creates directory for lists
       ansible.builtin.file:
@@ -33,8 +49,6 @@
         group: root
         mode: u=rw,g=r,o=r
         state: directory
-      tags:
-        - a
 
     - name: Create list file
       ansible.builtin.file:
@@ -43,8 +57,30 @@
         group: root
         mode: u=rw,g=r,o=r
         state: touch
-      tags:
-        - a
+
+    - name: Ensure override directory exists
+      ansible.builtin.file:
+        path: '/etc/systemd/system/{{ item }}.d'
+        state: directory
+        owner: root
+        group: root
+        mode: u=rwx,g=rx,o=rx
+      loop: "{{ dependent_services.split(' ') }}"
+      when: auto_add_service_with_interface
+
+    - name: Create or update Docker override file
+      ansible.builtin.copy:
+        dest: '/etc/systemd/system/{{ item }}.d/90-ip-per-service-{{ interface }}-dep.conf'
+        content: |
+          [Unit]
+          After=ip-per-service@{{ interface }}.service
+          Wants=ip-per-service@{{ interface }}.service
+        owner: root
+        group: root
+        mode: u=rw,g=r,o=r
+      loop: "{{ dependent_services.split(' ') }}"
+      when: auto_add_service_with_interface
+
 
     - name: Reload systemd
       ansible.builtin.systemd:
