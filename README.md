@@ -1,4 +1,4 @@
-these scripts were created as an experiment "by IP address to service", I needed to do `ip a add`, but doing it through `/etc/network/interfaces` is not convenient, especially in terms of automatic adding/removing addresses, the scripts here are intended for ipv6 but you can edit the script a little to support v4
+these scripts were created as an experiment "by IP address to service", I needed to do `ip a add`, but doing it through `/etc/network/interfaces` is not convenient, especially in terms of automatic adding/removing addresses, the scripts here are intended for ipv6 but you can use the script for v4
 
 # Setup Guide
 
@@ -26,7 +26,10 @@ This guide provides steps to set up the "IP per service" system. You can either 
     ansible-playbook playbook-install.yaml
     ```
 
-3. [modify the files of services that need these ip](#modify-the-files-of-services-that-need-these-ip)
+3. You can also specify which services need these IPs
+    ```bash
+    ansible-playbook playbook-install.yaml -e 'dependent_services=docker.service'
+    ```
 
 ---
 
@@ -71,19 +74,24 @@ This guide provides steps to set up the "IP per service" system. You can either 
     sudo systemctl enable ip-per-service@eth0.service
     sudo systemctl start ip-per-service@eth0.service
     ```
-
-9. [modify the files of services that need these ip](#modify-the-files-of-services-that-need-these-ip)
-
 ---
 
-## Modify the files of services that need these ip
-1. Open the service that requires an ip address
+9. You can also specify which services need these IPs, open the service that requires an ip address. example for docker.service and eth0 interface:
     ```bash
-    sudo systemctl edit --full docker.service
+    sudo tee /etc/systemd/system/docker.service.d/90-ip-per-service-eth0-dep.conf > /dev/null << EOF
+    [Unit]
+    After=ip-per-service@eth0.service
+    Wants=ip-per-service@eth0.service
+    EOF
+    ```
+    
+10. Reload `systemd` to register the service:  
+    ```bash
+    sudo systemctl daemon-reload
     ```
 
-2. Add dependency
-
+---
+  
 ## Usage
 
 1. Add desired IPv6 addresses to the appropriate IP list file:  

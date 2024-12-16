@@ -6,11 +6,11 @@ if [[ $# -ne 2 ]]; then
 fi
 
 IFACE="$1"
-IPS_FILE=$(cat "$2")
+IPS=$(cat "$2")
 
 for IP in $IPS; do
-    if ! ip -6 addr show dev "$IFACE" | grep -q "${IP%%/*}"; then
-        ip -6 addr add "$IP" dev "$IFACE"
+    if ! ip addr show dev "$IFACE" | grep -q "${IP%%/*}"; then
+        ip addr add "$IP" dev "$IFACE"
         echo "Added $IP"
     fi
 done
@@ -21,7 +21,7 @@ until (( missing == 0 )); do
     missing=0
 
     for IP in $IPS; do
-        if ip -6 addr show dev "$IFACE" | grep -q "${IP%%/*}"; then
+        if ip addr show dev "$IFACE" | grep -q "${IP%%/*}"; then
             let present++;
         else
             let missing++;
