@@ -1,0 +1,58 @@
+- name: Install ip-per-service
+  hosts: all
+  vars:
+    ip_list_prefix_path: '/usr/local/share/services-ips/'
+    script_path: '/usr/sbin/ip-per-service.sh'
+    interface: 'eth0'
+    auto_add_service_with_interface: true
+
+  become: true
+  tasks:
+    - name: Copy script
+      ansible.builtin.copy:
+        src: ./ip-per-service.sh
+        dest: "{{ script_path }}"
+        owner: root
+        group: root
+        mode: u=rwx,g=rx,o=rx
+
+    - name: Copy the systemd service file
+      ansible.builtin.template:
+        src: ip-per-service@.service.j2
+        dest: /etc/systemd/system/ip-per-service@.service
+        owner: root
+        group: root
+        mode: u=rw,g=r,o=r
+      tags:
+        - a
+
+    - name: Creates directory for lists
+      ansible.builtin.file:
+        path: '{{ ip_list_prefix_path }}'
+        owner: root
+        group: root
+        mode: u=rw,g=r,o=r
+        state: directory
+      tags:
+        - a
+
+    - name: Create list file
+      ansible.builtin.file:
+        path: '{{ ip_list_prefix_path }}ips-{{ interface }}.list'
+        owner: root
+        group: root
+        mode: u=rw,g=r,o=r
+        state: touch
+      tags:
+        - a
+
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Enable and start services
+      ansible.builtin.systemd:
+        name: ip-per-service@{{ interface }}.service
+        enabled: true
+        state: started
+      when: auto_add_service_with_interface
